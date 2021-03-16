@@ -117,7 +117,7 @@ void Server::OnHandle(std::vector<char> Data, udp::endpoint RemoteEndpoint)
 	}
 	else
 	{
-		Connection newClient(RemoteEndpoint, &m_Socket);
+		Connection newClient(&m_Socket, RemoteEndpoint);
 		m_Connections.push_back(newClient);
 
 		Connection* c = &m_Connections[m_Connections.size() - 1];

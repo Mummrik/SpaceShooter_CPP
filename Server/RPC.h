@@ -1,30 +1,22 @@
 #pragma once
 
 #include <iostream>
-#include <vector>
+#include <map>
 #include "NetworkMessage.h"
 #include "Connection.h"
 
 class RPC
 {
 public:
-	RPC()
-	{
-		Init();
-	}
-
-
-	void Invoke(PacketType type, Connection* client, NetworkMessage data)
-	{
-		if ((size_t)type < 0 && (size_t)type > m_RpcVector.size())
-			return;
-
-		((void (*)(Connection*, NetworkMessage)) m_RpcVector[type])(client, data);
-	}
+	RPC() { Init(); }
+	void Invoke(PacketType type, Connection* client, NetworkMessage data);
 
 private:
 	void Init();
-	std::vector<void* (*)(void*)> m_RpcVector;
-
+	std::map<PacketType, std::function<void(Connection*, NetworkMessage&)>> m_RpcMap;
+	void RegisterRPC(PacketType type, void (*func)(Connection*, NetworkMessage))
+	{
+		m_RpcMap.emplace(type, [func](Connection* client, NetworkMessage& msg) { func(client, msg); });
+	}
 };
 

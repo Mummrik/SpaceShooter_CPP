@@ -13,13 +13,14 @@ int main()
 		game.Start();
 
 	game.GetListenerThread()->join();
+	game.GetSocket()->close();
 
 	return 0;
 }
 
 bool Client::Connect(udp::endpoint RemoteEndpoint)
 {
-	if (IsConnected)
+	if (m_Client.IsConnected)
 		return false;
 
 	std::cout << "Try connecting | " << RemoteEndpoint << std::endl;
@@ -38,14 +39,15 @@ bool Client::Connect(udp::endpoint RemoteEndpoint)
 		return false;
 	}
 
-	IsConnected = true;
+	m_Client.Endpoint = RemoteEndpoint;
+	m_Client.IsConnected = true;
 	return true;
 }
 
 void Client::OnHandle(std::vector<char> Data)
 {
 	NetworkMessage msg(Data);
-	m_Rpc.Invoke(msg.GetPacketType(), this, msg);
+	m_Rpc.Invoke(msg.GetPacketType(), &m_Client, msg);
 }
 
 void Client::OnListen()
@@ -54,7 +56,7 @@ void Client::OnListen()
 	std::array<char, 1024> InBuffer;
 	udp::endpoint RemoteEndpoint;
 
-	while (IsConnected)
+	while (m_Client.IsConnected)
 	{
 		size_t recvSize = m_Socket.receive_from(asio::buffer(InBuffer), RemoteEndpoint);
 

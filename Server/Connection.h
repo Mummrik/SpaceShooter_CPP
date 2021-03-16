@@ -11,7 +11,7 @@ using asio::ip::udp;
 class Connection
 {
 public:
-	Connection(udp::endpoint ep, udp::socket* socket) : Endpoint(ep), Socket(socket)
+	Connection(udp::socket* socket, udp::endpoint ep) : Socket(socket), Endpoint(ep)
 	{
 	}
 
