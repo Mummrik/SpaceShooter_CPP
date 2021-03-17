@@ -1,5 +1,8 @@
 # include folder
-include/
+include/**/*
+
+# Allow include files
+!include/NetworkMessage.h
 
 # builds
 x64/
