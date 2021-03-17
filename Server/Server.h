@@ -7,7 +7,7 @@
 class Server
 {
 public:
-	Server(const uint16_t port) : m_Port(port), m_Socket(m_Context, udp::endpoint(udp::v4(), port)) {}
+	Server(const uint16_t& port) : m_Port(port), m_Socket(m_Context, udp::endpoint(udp::v4(), port)) {}
 	~Server() {}
 
 	bool Start();
@@ -24,11 +24,11 @@ private:
 
 public:
 	std::thread* GetListenerThread() { return &m_Listener; }
-	void OnHandle(const std::vector<char>& Data, udp::endpoint RemoteEndpoint);
+	void OnHandle(const std::vector<char>& Data, const udp::endpoint& RemoteEndpoint);
 	void OnListen();
 
 public:
-	Connection* GetConnection(udp::endpoint RemoteEndpoint);
-	bool CompareEndpoints(udp::endpoint a, udp::endpoint b) { return a == b; }
+	Connection* GetConnection(const udp::endpoint& RemoteEndpoint);
+	bool CompareEndpoints(const udp::endpoint& a, const udp::endpoint& b) { return a == b; }
 	void TerminateClient(Connection* client);
 };

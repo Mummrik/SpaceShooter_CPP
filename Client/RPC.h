@@ -5,18 +5,19 @@
 #include "NetworkMessage.h"
 #include "Connection.h"
 
-class Client;
-
 class RPC
 {
 public:
 	RPC() { Init(); }
-	void Invoke(PacketType type, Connection* client, NetworkMessage data);
+	void Invoke(const PacketType& type, Connection* client, const NetworkMessage& data);
 
 private:
-	std::map<PacketType, std::function<void(Connection*, NetworkMessage&)>> m_RpcMap;
+	typedef std::function<void(Connection*, const NetworkMessage&)> Func;
+	std::map<PacketType, Func> m_RpcMap;
+
+private:
 	void Init();
-	void RegisterRPC(PacketType type, void (*func)(Connection*, NetworkMessage));
+	void RegisterRPC(const PacketType& type, void (*func)(Connection*, const NetworkMessage));
 
 };
 

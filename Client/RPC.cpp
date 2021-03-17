@@ -2,7 +2,6 @@
 
 static void RPC_Disconnect(Connection* client, NetworkMessage data)
 {
-	// Code for disconnecting a client...
 	std::cout << ">> Server" << " => Called RPC_Disconnect()" << std::endl;
 	client->IsConnected = false;
 }
@@ -11,7 +10,6 @@ static void RPC_HandShake(Connection* client, NetworkMessage data)
 {
 	client->Id = data.ReadUint64();
 
-	// Code for client handshaking...
 	std::cout << ">> Server" << " => Called RPC_HandShake()\n\tcid: " << client->Id << std::endl;
 
 	NetworkMessage msg(PacketType::HandShake);
@@ -25,7 +23,7 @@ void RPC::Init()
 	RegisterRPC(PacketType::HandShake, RPC_HandShake);
 }
 
-void RPC::Invoke(PacketType type, Connection* client, NetworkMessage data)
+void RPC::Invoke(const PacketType& type, Connection* client, const NetworkMessage& data)
 {
 	auto it = m_RpcMap.find(type);
 	if (it != m_RpcMap.end())
@@ -34,7 +32,7 @@ void RPC::Invoke(PacketType type, Connection* client, NetworkMessage data)
 	}
 }
 
-void RPC::RegisterRPC(PacketType type, void (*func)(Connection*, NetworkMessage))
+void RPC::RegisterRPC(const PacketType& type, void (*func)(Connection*, const NetworkMessage))
 {
-	m_RpcMap.emplace(type, [func](Connection* client, NetworkMessage& msg) { func(client, msg); });
+	m_RpcMap.emplace(type, [func](Connection* client, const NetworkMessage& msg) { func(client, msg); });
 }

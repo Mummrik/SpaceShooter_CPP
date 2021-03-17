@@ -6,7 +6,7 @@
 class Connection
 {
 public:
-	Connection(udp::socket* socket, udp::endpoint ep) : Socket(socket), Endpoint(ep) {}
+	Connection(udp::socket* socket, const udp::endpoint& ep) : Socket(socket), Endpoint(ep) {}
 
 	bool SetId()
 	{

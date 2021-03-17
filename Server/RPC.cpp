@@ -28,12 +28,12 @@ void RPC::Init()
 	RegisterRPC(PacketType::HandShake, RPC_HandShake);
 }
 
-void RPC::RegisterRPC(PacketType type, void (*func)(Connection*, NetworkMessage))
+void RPC::RegisterRPC(const PacketType& type, void (*func)(Connection*, const NetworkMessage))
 {
-	m_RpcMap.emplace(type, [func](Connection* client, NetworkMessage& msg) { func(client, msg); });
+	m_RpcMap.emplace(type, [func](Connection* client, const NetworkMessage& msg) { func(client, msg); });
 }
 
-void RPC::Invoke(PacketType type, Connection* client, NetworkMessage data)
+void RPC::Invoke(const PacketType& type, Connection* client, const NetworkMessage& data)
 {
 	auto it = m_RpcMap.find(type);
 	if (it != m_RpcMap.end())

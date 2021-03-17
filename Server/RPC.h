@@ -9,11 +9,14 @@ class RPC
 {
 public:
 	RPC() { Init(); }
-	void Invoke(PacketType type, Connection* client, NetworkMessage data);
+	void Invoke(const PacketType& type, Connection* client, const NetworkMessage& data);
+
+private:
+	typedef std::function<void(Connection*, const NetworkMessage&)> Func;
+	std::map<PacketType, Func> m_RpcMap;
 
 private:
 	void Init();
-	std::map<PacketType, std::function<void(Connection*, NetworkMessage&)>> m_RpcMap;
-	void RegisterRPC(PacketType type, void (*func)(Connection*, NetworkMessage));
+	void RegisterRPC(const PacketType& type, void (*func)(Connection*, const NetworkMessage));
 };
 

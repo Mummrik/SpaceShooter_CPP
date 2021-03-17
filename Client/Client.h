@@ -10,7 +10,7 @@
 class Client : public olc::PixelGameEngine
 {
 public:
-	Client(std::string host, std::string port) : m_Socket(m_Context), m_Client(&m_Socket)
+	Client(const std::string& host, const std::string& port) : m_Socket(m_Context), m_Client(&m_Socket)
 	{
 		sAppName = "Space Wars";
 		udp::resolver resolver(m_Context);
@@ -54,8 +54,8 @@ private:
 	Connection m_Client;
 
 private:
-	bool Connect(udp::endpoint RemoteEndpoint);
-	void OnHandle(std::vector<char> Data);
+	bool Connect(const udp::endpoint& RemoteEndpoint);
+	void OnHandle(const std::vector<char>& Data);
 	void OnListen();
 
 public:

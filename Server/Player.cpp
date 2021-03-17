@@ -1,6 +1,5 @@
 #include "Player.h"
 
-
 void Player::CreateNewPlayer()
 {
 	std::cout << "Player::CreateNewPlayer()" << std::endl;

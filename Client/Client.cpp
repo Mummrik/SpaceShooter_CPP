@@ -7,7 +7,7 @@ int main()
 {
 	// params host, port
 	Client game("127.0.0.1", "7171");
-	if (game.Construct(1280, 720, 1, 1))
+	if (game.Construct(200, 200, 1, 1))
 		game.Start();
 
 	game.GetListenerThread()->join();
@@ -16,7 +16,7 @@ int main()
 	return 0;
 }
 
-bool Client::Connect(udp::endpoint RemoteEndpoint)
+bool Client::Connect(const udp::endpoint& RemoteEndpoint)
 {
 	if (m_Client.IsConnected)
 		return false;
@@ -32,7 +32,7 @@ bool Client::Connect(udp::endpoint RemoteEndpoint)
 	return true;
 }
 
-void Client::OnHandle(std::vector<char> Data)
+void Client::OnHandle(const std::vector<char>& Data)
 {
 	NetworkMessage msg(Data);
 	m_Rpc.Invoke(msg.GetPacketType(), &m_Client, msg);

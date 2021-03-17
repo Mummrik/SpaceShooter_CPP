@@ -97,7 +97,7 @@ void Server::OnListen()
 	std::cout << "Listener thread terminated" << std::endl;
 }
 
-void Server::OnHandle(const std::vector<char>& Data, udp::endpoint RemoteEndpoint)
+void Server::OnHandle(const std::vector<char>& Data, const udp::endpoint& RemoteEndpoint)
 {
 	if (Connection* client = GetConnection(RemoteEndpoint))
 	{
@@ -136,7 +136,7 @@ void Server::OnHandle(const std::vector<char>& Data, udp::endpoint RemoteEndpoin
 	}
 }
 
-Connection* Server::GetConnection(udp::endpoint RemoteEndpoint)
+Connection* Server::GetConnection(const udp::endpoint& RemoteEndpoint)
 {
 	size_t size = m_Connections.size();
 	for (size_t i = 0; i < size; i++)
