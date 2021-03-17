@@ -5,11 +5,9 @@
 
 int main()
 {
-	// "83.251.240.77"
 	// params host, port
 	Client game("127.0.0.1", "7171");
-	//if (game.Construct(1280, 720, 1, 1))
-	if (game.Construct(1, 1, 1, 1))
+	if (game.Construct(1280, 720, 1, 1))
 		game.Start();
 
 	game.GetListenerThread()->join();
@@ -25,19 +23,9 @@ bool Client::Connect(udp::endpoint RemoteEndpoint)
 
 	std::cout << "Try connecting | " << RemoteEndpoint << std::endl;
 
-	try
-	{
-		m_Socket.open(udp::v4());
-		NetworkMessage msg(PacketType::HandShake);
-		msg.Send(&m_Socket, RemoteEndpoint);
-	}
-	catch (const std::exception& ex)
-	{
-		m_Socket.close();
-		std::string ErrorMsg = "Error: Couldn't establish connection to server | ";
-		std::cerr << ErrorMsg << "\n" << RemoteEndpoint << ex.what() << std::endl;
-		return false;
-	}
+	m_Socket.open(udp::v4());
+	NetworkMessage msg(PacketType::HandShake);
+	msg.Send(&m_Socket, RemoteEndpoint);
 
 	m_Client.Endpoint = RemoteEndpoint;
 	m_Client.IsConnected = true;

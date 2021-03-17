@@ -3,9 +3,7 @@
 class Connection
 {
 public:
-	Connection(udp::socket* socket) : Socket(socket)
-	{
-	}
+	Connection(udp::socket* socket) : Socket(socket) {}
 
 public:
 	udp::socket* Socket;

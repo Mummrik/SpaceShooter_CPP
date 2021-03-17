@@ -16,10 +16,7 @@ public:
 private:
 	std::map<PacketType, std::function<void(Connection*, NetworkMessage&)>> m_RpcMap;
 	void Init();
-	void RegisterRPC(PacketType type, void (*func)(Connection*, NetworkMessage))
-	{
-		m_RpcMap.emplace(type, [func](Connection* client, NetworkMessage& msg) { func(client, msg); });
-	}
+	void RegisterRPC(PacketType type, void (*func)(Connection*, NetworkMessage));
 
 };
 

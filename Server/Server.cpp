@@ -31,7 +31,7 @@ bool Server::Shutdown()
 
 void TestNetworkMessage()
 {
-	NetworkMessage testMsg(PacketType::Test);
+	NetworkMessage testMsg(PacketType::Length);
 	testMsg.Write((int8_t)INT8_MIN);
 	testMsg.Write((int16_t)INT16_MIN);
 	testMsg.Write(INT32_MIN);
@@ -97,7 +97,7 @@ void Server::OnListen()
 	std::cout << "Listener thread terminated" << std::endl;
 }
 
-void Server::OnHandle(std::vector<char> Data, udp::endpoint RemoteEndpoint)
+void Server::OnHandle(const std::vector<char>& Data, udp::endpoint RemoteEndpoint)
 {
 	if (Connection* client = GetConnection(RemoteEndpoint))
 	{

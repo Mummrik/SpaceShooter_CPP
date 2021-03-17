@@ -24,7 +24,7 @@ private:
 
 public:
 	std::thread* GetListenerThread() { return &m_Listener; }
-	void OnHandle(std::vector<char> Data, udp::endpoint RemoteEndpoint);
+	void OnHandle(const std::vector<char>& Data, udp::endpoint RemoteEndpoint);
 	void OnListen();
 
 public:
