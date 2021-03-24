@@ -1,22 +1,27 @@
 #pragma once
 
 #include <iostream>
-#include <map>
-#include "NetworkMessage.h"
-#include "Connection.h"
+#include <array>
+#include <NetworkMessage.h>
+
+class Server;
+class Connection;
 
 class RPC
 {
 public:
-	RPC() { Init(); }
-	void Invoke(const PacketType& type, Connection* client, const NetworkMessage& data);
+	RPC(Server* server) : m_Server(server) { Init(); }
+	void Invoke(RPC& rpc, const PacketType& type, Connection* client, NetworkMessage& data);
 
 private:
-	typedef std::function<void(Connection*, const NetworkMessage&)> Func;
-	std::map<PacketType, Func> m_RpcMap;
+	typedef void(RPC::* RpcCallbacks)(Connection*, NetworkMessage&);
+	RpcCallbacks m_Rpc[(size_t)PacketType::MAX_LENGTH];
+	Server* m_Server;
 
 private:
 	void Init();
-	void RegisterRPC(const PacketType& type, void (*func)(Connection*, const NetworkMessage));
+	void Disconnect(Connection* client, NetworkMessage& data);
+	void HandShake(Connection* client, NetworkMessage& data);
 };
+
 

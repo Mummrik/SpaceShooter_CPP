@@ -3,6 +3,7 @@
 void Player::CreateNewPlayer()
 {
 	std::cout << "Player::CreateNewPlayer()" << std::endl;
+	// TODO: Setup player on server side
 }
 
 void Player::RemovePlayer()

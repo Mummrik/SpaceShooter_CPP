@@ -1,43 +1,36 @@
 #include "RPC.h"
+#include "Connection.h"
+#include "Server.h"
 
-static void RPC_Disconnect(Connection* client, NetworkMessage data)
+void RPC::Invoke(RPC& rpc, const PacketType& type, Connection* client, NetworkMessage& data)
 {
-	// Code for disconnecting a client...
-	std::cout << ">> " << client->Endpoint << " => Called RPC_Disconnect()" << std::endl;
-	client->Player->RemovePlayer();
-
-	NetworkMessage msg(PacketType::Disconnect);
-	msg.Send(client->Socket, client->Endpoint);
-}
-
-static void RPC_HandShake(Connection* client, NetworkMessage data)
-{
-	// Code for client handshaking...
-	std::cout << ">> " << client->Endpoint << " => Called RPC_HandShake()" << std::endl;
-	client->Authorized = true;
-
-	// TODO: Setup player on server side
-	client->Player->CreateNewPlayer();
-	// TODO: send new player package to client(s)
+	if ((uint16_t)type >= 0 && type < PacketType::MAX_LENGTH && m_Rpc[(size_t)type] != nullptr)
+	{
+		std::invoke(m_Rpc[(size_t)type], rpc, client, data);
+	}
 }
 
 void RPC::Init()
 {
-	//Register RPC's here!!!
-	RegisterRPC(PacketType::Disconnect, RPC_Disconnect);
-	RegisterRPC(PacketType::HandShake, RPC_HandShake);
+	//Register RPC's here
+	m_Rpc[(size_t)PacketType::Disconnect] = &RPC::Disconnect;
+	m_Rpc[(size_t)PacketType::HandShake] = &RPC::HandShake;
 }
 
-void RPC::RegisterRPC(const PacketType& type, void (*func)(Connection*, const NetworkMessage))
+void RPC::Disconnect(Connection* client, NetworkMessage& data)
 {
-	m_RpcMap.emplace(type, [func](Connection* client, const NetworkMessage& msg) { func(client, msg); });
+	// Code for disconnecting a client...
+	std::cout << ">> Called RPC_Disconnect()" << std::endl;
+
+	m_Server->TerminateClient(client);
 }
 
-void RPC::Invoke(const PacketType& type, Connection* client, const NetworkMessage& data)
+void RPC::HandShake(Connection* client, NetworkMessage& data)
 {
-	auto it = m_RpcMap.find(type);
-	if (it != m_RpcMap.end())
-	{
-		it->second(client, data);
-	}
+	// Code for client handshaking...
+	std::cout << ">> Called RPC_HandShake()" << std::endl;
+	client->Authorized = true;
+
+	NetworkMessage msg(PacketType::NewPlayer);
+	client->Send(msg);
 }

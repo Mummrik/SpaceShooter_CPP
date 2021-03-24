@@ -1,20 +1,14 @@
 #pragma once
 
-#ifdef _WIN32
-#define _WIN32_WINNT 0x0A00
-#endif
-#define ASIO_STANDALONE
-#include <asio.hpp>
+#include <vector>
 
-using asio::ip::udp;
-
-enum PacketType : uint16_t
+enum class PacketType
 {
 	Disconnect,
 	HandShake,
 	Ping,
 	NewPlayer,
-	Length,
+	MAX_LENGTH // NOTE: Keep this as last element
 };
 
 struct NetworkMessage
@@ -38,12 +32,6 @@ struct NetworkMessage
 		ReadPos = 2;
 	}
 
-	void Send(udp::socket* Socket, const udp::endpoint& Receiver)
-	{
-		PrepareSend();
-		Socket->send_to(asio::buffer(Body), Receiver);
-	}
-
 	size_t GetSize()
 	{
 		return Body.size();
@@ -61,13 +49,13 @@ struct NetworkMessage
 	{
 		if (BodyContainsHeader == false)
 		{
-			Body.insert(Body.begin(), (char)(Header >> 8));
-			Body.insert(Body.begin(), (char)(Header & 0xFF));
+			Body.insert(Body.begin(), (char)((uint16_t)Header >> 8));
+			Body.insert(Body.begin(), (char)((uint16_t)Header & 0xFF));
 			BodyContainsHeader = true;
 		}
 	}
 
-	void Write(const char& value)
+	void Write(char value)
 	{
 		Body.push_back(value);
 		ReadPos++;
@@ -81,50 +69,50 @@ struct NetworkMessage
 		}
 	}
 
-	void Write(const int8_t& value)
+	void Write(int8_t value)
 	{
 		Write((char)value);
 	}
 
-	void Write(const uint8_t& value)
+	void Write(uint8_t value)
 	{
 		Write((char)value);
 	}
 
-	void Write(const int16_t& value)
+	void Write(int16_t value)
 	{
 		Write((char)(value & 0xFF));
 		Write((char)(value >> 8));
 	}
 
-	void Write(const uint16_t& value)
+	void Write(uint16_t value)
 	{
 		Write((char)(value & 0xFF));
 		Write((char)(value >> 8));
 	}
 
-	void Write(const int32_t& value)
+	void Write(int32_t value)
 	{
 		Write((char)(value & 0xFF));
 		for (auto i = 1; i < 4; i++)
 			Write((char)(value >> (8 * i)));
 	}
 
-	void Write(const uint32_t& value)
+	void Write(uint32_t value)
 	{
 		Write((char)(value & 0xFF));
 		for (auto i = 1; i < 4; i++)
 			Write((char)(value >> (8 * i)));
 	}
 
-	void Write(const int64_t& value)
+	void Write(int64_t value)
 	{
 		Write((char)(value & 0xFF));
 		for (auto i = 1; i < 8; i++)
 			Write((char)(value >> (8 * i)));
 	}
 
-	void Write(const uint64_t& value)
+	void Write(uint64_t value)
 	{
 		Write((char)(value & 0xFF));
 		for (auto i = 1; i < 8; i++)

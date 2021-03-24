@@ -1,38 +1,42 @@
 #include "RPC.h"
+#include "Connection.h"
 
-static void RPC_Disconnect(Connection* client, NetworkMessage data)
+void RPC::Invoke(RPC& rpc, const PacketType& type, Connection* client, NetworkMessage& data)
+{
+	if ((size_t)type >= 0 && type < PacketType::MAX_LENGTH && m_Rpc[(size_t)type] != nullptr)
+	{
+		std::invoke(m_Rpc[(size_t)type], rpc, client, data);
+	}
+}
+
+void RPC::Init()
+{
+	//Register RPC's here
+	m_Rpc[(size_t)PacketType::Disconnect] = &RPC::Disconnect;
+	m_Rpc[(size_t)PacketType::HandShake] = &RPC::HandShake;
+	m_Rpc[(size_t)PacketType::NewPlayer] = &RPC::NewPlayer;
+}
+
+void RPC::Disconnect(Connection* client, NetworkMessage& data)
 {
 	std::cout << ">> Server" << " => Called RPC_Disconnect()" << std::endl;
 	client->IsConnected = false;
 }
 
-static void RPC_HandShake(Connection* client, NetworkMessage data)
+void RPC::HandShake(Connection* client, NetworkMessage& data)
 {
 	client->Id = data.ReadUint64();
 
 	std::cout << ">> Server" << " => Called RPC_HandShake()\n\tcid: " << client->Id << std::endl;
 
 	NetworkMessage msg(PacketType::HandShake);
-	msg.Send(client->Socket, client->Endpoint);
+	client->Send(msg);
 }
 
-void RPC::Init()
+void RPC::NewPlayer(Connection* client, NetworkMessage& data)
 {
-	//Register RPC's here!!!
-	RegisterRPC(PacketType::Disconnect, RPC_Disconnect);
-	RegisterRPC(PacketType::HandShake, RPC_HandShake);
-}
+	std::cout << ">> Server" << " => Called RPC_NewPlayer()" << std::endl;
 
-void RPC::Invoke(const PacketType& type, Connection* client, const NetworkMessage& data)
-{
-	auto it = m_RpcMap.find(type);
-	if (it != m_RpcMap.end())
-	{
-		it->second(client, data);
-	}
-}
-
-void RPC::RegisterRPC(const PacketType& type, void (*func)(Connection*, const NetworkMessage))
-{
-	m_RpcMap.emplace(type, [func](Connection* client, const NetworkMessage& msg) { func(client, msg); });
+	/*client->Player.Create("Player: " + std::to_string(client->Id));
+	std::cout << client->Player.GetName() << std::endl;*/
 }

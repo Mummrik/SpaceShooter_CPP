@@ -143,12 +143,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Client.cpp" />
+    <ClCompile Include="Connection.cpp" />
+    <ClCompile Include="Game.cpp" />
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="olcPixelGameEngine.cpp" />
+    <ClCompile Include="Player.cpp" />
     <ClCompile Include="RPC.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Client.h" />
     <ClInclude Include="Connection.h" />
+    <ClInclude Include="Game.h" />
+    <ClInclude Include="olcPixelGameEngine.h" />
+    <ClInclude Include="Player.h" />
     <ClInclude Include="RPC.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

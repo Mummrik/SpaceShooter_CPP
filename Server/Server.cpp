@@ -3,21 +3,11 @@
 
 #include "Server.h"
 
-int main()
-{
-	const uint16_t port(7171);
-	Server server(port);
-	server.Start();
-
-	server.GetListenerThread()->join();
-	server.Shutdown();
-
-	return 0;
-}
-
 bool Server::Start()
 {
-	std::cout << "Server starting on port " << m_Port << std::endl;
+	if (IsRunning)
+		return false;
+
 	m_Listener = std::thread(&Server::OnListen, this);
 	return true;
 }
@@ -25,13 +15,19 @@ bool Server::Start()
 bool Server::Shutdown()
 {
 	IsRunning = false;
-	m_Socket.close();
+
+	if (m_Listener.joinable())
+		m_Listener.join();
+
+	if (m_Socket.is_open())
+		m_Socket.close();
+
 	return true;
 }
 
 void TestNetworkMessage()
 {
-	NetworkMessage testMsg(PacketType::Length);
+	NetworkMessage testMsg(PacketType::MAX_LENGTH);
 	testMsg.Write((int8_t)INT8_MIN);
 	testMsg.Write((int16_t)INT16_MIN);
 	testMsg.Write(INT32_MIN);
@@ -44,7 +40,7 @@ void TestNetworkMessage()
 	testMsg.PrepareSend();
 
 	NetworkMessage data(testMsg.Body);
-	std::cout << "\n-- Test Message --\nMessageType: " << data.GetPacketType() << std::endl;
+	std::cout << "\n-- Test Message --\nMessageType: " << (uint16_t)data.GetPacketType() << std::endl;
 	int8_t test_int8_t = data.ReadInt8();
 	std::cout << "\nsigned\nint8_t " << (int16_t)test_int8_t << std::endl;
 
@@ -72,24 +68,29 @@ void TestNetworkMessage()
 
 void Server::OnListen()
 {
-	IsRunning = true;
 	std::cout << "Listener thread started" << std::endl;
-	udp::endpoint RemoteEndpoint;
+	asio::ip::udp::endpoint RemoteEndpoint;
 	std::array<char, 1024> InBuffer;
+	size_t recvSize = 0;
+	IsRunning = true;
 
 	// Testing NetworkMessage 
 	//TestNetworkMessage();
 
 	while (IsRunning)
 	{
-		size_t recvSize = m_Socket.receive_from(asio::buffer(InBuffer), RemoteEndpoint);
+		try
+		{
+			recvSize = m_Socket.receive_from(asio::buffer(InBuffer), RemoteEndpoint);
+		}
+		catch (const std::exception& ex)
+		{
+			std::cout << "\nException: " << ex.what() << "\n" << std::endl;
+		}
 
 		if (recvSize > 0)
 		{
-			std::vector<char> data;
-			for (size_t i = 0; i < recvSize; i++)
-				data.push_back(InBuffer[i]);
-
+			std::vector<char> data(InBuffer.begin(), InBuffer.begin() + recvSize);
 			OnHandle(data, RemoteEndpoint);
 		}
 	}
@@ -97,18 +98,19 @@ void Server::OnListen()
 	std::cout << "Listener thread terminated" << std::endl;
 }
 
-void Server::OnHandle(const std::vector<char>& Data, const udp::endpoint& RemoteEndpoint)
+void Server::OnHandle(const std::vector<char>& Data, const asio::ip::udp::endpoint& RemoteEndpoint)
 {
-	if (Connection* client = GetConnection(RemoteEndpoint))
+	Connection* client;
+	if (client = GetConnection(RemoteEndpoint))
 	{
 		NetworkMessage msg(Data);
 		if (client->Authorized)
 		{
-			m_Rpc.Invoke(msg.GetPacketType(), client, msg);
+			m_Rpc.Invoke(m_Rpc, msg.GetPacketType(), client, msg);
 		}
 		else if (!client->Authorized && msg.GetPacketType() == PacketType::HandShake)
 		{
-			m_Rpc.Invoke(msg.GetPacketType(), client, msg);
+			m_Rpc.Invoke(m_Rpc, msg.GetPacketType(), client, msg);
 		}
 		else
 		{
@@ -120,28 +122,28 @@ void Server::OnHandle(const std::vector<char>& Data, const udp::endpoint& Remote
 		Connection newClient(&m_Socket, RemoteEndpoint);
 		m_Connections.push_back(newClient);
 
-		Connection* c = &m_Connections[m_Connections.size() - 1];
-		if (c->SetId())
+		client = &m_Connections[m_Connections.size() - 1];
+		if (client->SetId())
 		{
-			std::cout << "New Connection | " << c->Endpoint << std::endl;
+			std::cout << "New Connection | " << client->RemoteEndpoint << std::endl;
 
 			NetworkMessage msg(PacketType::HandShake);
-			msg.Write(c->Id);
-			msg.Send(&m_Socket, RemoteEndpoint);
+			msg.Write(client->Id);
+			client->Send(msg);
 		}
 		else
 		{
-			TerminateClient(c);
+			TerminateClient(client);
 		}
 	}
 }
 
-Connection* Server::GetConnection(const udp::endpoint& RemoteEndpoint)
+Connection* Server::GetConnection(const asio::ip::udp::endpoint& RemoteEndpoint)
 {
 	size_t size = m_Connections.size();
 	for (size_t i = 0; i < size; i++)
 	{
-		if (CompareEndpoints(m_Connections[i].Endpoint, RemoteEndpoint))
+		if (m_Connections[i].RemoteEndpoint == RemoteEndpoint)
 		{
 			return &m_Connections[i];
 		}
@@ -152,19 +154,13 @@ Connection* Server::GetConnection(const udp::endpoint& RemoteEndpoint)
 
 void Server::TerminateClient(Connection* client)
 {
-	// Step backwards to speed up terminating unvalid clients
-	size_t lastIndex = m_Connections.size() - 1;
-	for (auto i = lastIndex; i >= 0; --i)
+	auto it = std::find_if(m_Connections.begin(), m_Connections.end(),
+		[client](Connection other) { return client->RemoteEndpoint == other.RemoteEndpoint; });
+
+	if (it != m_Connections.end())
 	{
-		if (client->Endpoint == m_Connections[i].Endpoint)
-		{
-			NetworkMessage msg(PacketType::Disconnect);
-			msg.Send(&m_Socket, client->Endpoint);
-
-			std::cout << "Terminated Connection | " << client->Endpoint << std::endl;
-
-			m_Connections.erase(m_Connections.begin() + i);
-			break;
-		}
+		NetworkMessage msg(PacketType::Disconnect);
+		client->Send(msg);
+		m_Connections.erase(it);
 	}
 }
