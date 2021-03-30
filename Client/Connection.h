@@ -17,13 +17,12 @@ public:
 	~Connection() { Shutdown(); }
 
 public:
+	bool bShutdown = false;
 	bool Authorized = false;
-	bool IsConnected = false;
 	size_t Id = 0;
 
 public:
-	void Start();
-	void Shutdown();
+	void Start(Game* game);
 	void Send(NetworkMessage& msg);
 
 private:
@@ -34,6 +33,7 @@ private:
 	RPC m_Rpc;
 
 private:
+	void Shutdown();
 	void OnListen();
 	void OnHandle(const std::vector<char>& Data);
 };

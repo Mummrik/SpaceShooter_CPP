@@ -1,28 +1,25 @@
 #include "Connection.h"
 
-void Connection::Start()
+void Connection::Start(Game* game)
 {
 	if (m_Socket.is_open())
 		return;
 
+	m_Rpc.Initialize(game);
+
 	std::cout << "Try connecting | " << m_RemoteEndpoint << std::endl;
+
 	m_Socket.open(asio::ip::udp::v4());
-
-	// Send dummy data to setup network
-	m_Socket.send_to(asio::buffer({ 0 }), m_RemoteEndpoint);
-
 	m_Listener = std::thread(&Connection::OnListen, this);
 }
 
 void Connection::Shutdown()
 {
-	IsConnected = false;
+	if (m_Socket.is_open())
+		m_Socket.close();
 
 	if (m_Listener.joinable())
 		m_Listener.join();
-
-	if (m_Socket.is_open())
-		m_Socket.close();
 }
 
 void Connection::Send(NetworkMessage& msg)
@@ -36,11 +33,12 @@ void Connection::OnListen()
 	std::cout << "Listener thread initialized" << std::endl;
 	std::array<char, 1024> InBuffer;
 	asio::ip::udp::endpoint RemoteEndpoint;
-
 	size_t recvSize = 0;
-	IsConnected = true;
 
-	while (IsConnected)
+	// Send dummy data to setup network
+	m_Socket.send_to(asio::buffer({ (uint8_t)0 }), m_RemoteEndpoint);
+
+	while (!bShutdown)
 	{
 		try
 		{
@@ -65,6 +63,5 @@ void Connection::OnListen()
 void Connection::OnHandle(const std::vector<char>& Data)
 {
 	NetworkMessage msg(Data);
-	//std::cout << "OnHandle PacketType : " << (uint16_t)msg.Header << std::endl;
 	m_Rpc.Invoke(m_Rpc, msg.GetPacketType(), this, msg);
 }

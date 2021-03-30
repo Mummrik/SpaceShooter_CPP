@@ -8,6 +8,8 @@ enum class PacketType
 	HandShake,
 	Ping,
 	NewPlayer,
+	Movement,
+	RemovePlayer,
 	MAX_LENGTH // NOTE: Keep this as last element
 };
 

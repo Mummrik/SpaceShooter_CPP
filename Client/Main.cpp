@@ -3,6 +3,7 @@
 
 #include "Game.h"
 #include "Connection.h"
+#include "RPC.h"
 
 using asio::ip::address;
 
@@ -12,10 +13,9 @@ int main()
 	uint16_t port = 7171;
 
 	Connection client(host, port);
-	client.Start();
 
 	Game game("Title", &client);
-	if (game.Construct(200, 200, 1, 1))
+	if (game.Construct(1280, 720, 1, 1))
 	{
 		game.Start();
 	}

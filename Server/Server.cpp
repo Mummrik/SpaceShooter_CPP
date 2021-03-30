@@ -72,6 +72,7 @@ void Server::OnListen()
 	asio::ip::udp::endpoint RemoteEndpoint;
 	std::array<char, 1024> InBuffer;
 	size_t recvSize = 0;
+
 	IsRunning = true;
 
 	// Testing NetworkMessage 
@@ -86,6 +87,7 @@ void Server::OnListen()
 		catch (const std::exception& ex)
 		{
 			std::cout << "\nException: " << ex.what() << "\n" << std::endl;
+			TerminateClient(GetConnection(RemoteEndpoint));
 		}
 
 		if (recvSize > 0)
@@ -93,6 +95,7 @@ void Server::OnListen()
 			std::vector<char> data(InBuffer.begin(), InBuffer.begin() + recvSize);
 			OnHandle(data, RemoteEndpoint);
 		}
+
 	}
 
 	std::cout << "Listener thread terminated" << std::endl;
@@ -129,12 +132,21 @@ void Server::OnHandle(const std::vector<char>& Data, const asio::ip::udp::endpoi
 
 			NetworkMessage msg(PacketType::HandShake);
 			msg.Write(client->Id);
-			client->Send(msg);
+			client->Send(msg, true);
 		}
 		else
 		{
 			TerminateClient(client);
 		}
+	}
+}
+
+void Server::SendToAll(NetworkMessage& msg, bool reliable)
+{
+	msg.PrepareSend();
+	for (auto& client : m_Connections)
+	{
+		client.Socket->send_to(asio::buffer(msg.Body), client.RemoteEndpoint);
 	}
 }
 
@@ -154,13 +166,46 @@ Connection* Server::GetConnection(const asio::ip::udp::endpoint& RemoteEndpoint)
 
 void Server::TerminateClient(Connection* client)
 {
+	RemovePlayer(client->Id);
+
 	auto it = std::find_if(m_Connections.begin(), m_Connections.end(),
-		[client](Connection other) { return client->RemoteEndpoint == other.RemoteEndpoint; });
+		[&client](Connection const& other) { return client->RemoteEndpoint == other.RemoteEndpoint; });
 
 	if (it != m_Connections.end())
 	{
 		NetworkMessage msg(PacketType::Disconnect);
-		client->Send(msg);
+		client->Send(msg, true);
 		m_Connections.erase(it);
 	}
+}
+
+void Server::RemovePlayer(size_t uid)
+{
+	Player* player = GetPlayer(uid);
+	auto it = std::find_if(m_Players.begin(), m_Players.end(),
+		[player](std::pair<size_t, Player*> const& other) { return player == other.second; });
+
+	if (it != m_Players.end())
+	{
+		NetworkMessage msg(PacketType::RemovePlayer);
+		msg.Write(uid);
+		SendToAll(msg, true);
+
+		m_Players.erase(it);
+		delete player;
+	}
+
+}
+
+Player* Server::GetPlayer(size_t uid)
+{
+	auto it = std::find_if(m_Players.begin(), m_Players.end(),
+		[&uid](std::pair<size_t, Player*> const& player) { return uid == player.first; });
+
+	if (it != m_Players.end())
+	{
+		return m_Players[uid];
+	}
+	
+	return nullptr;
 }

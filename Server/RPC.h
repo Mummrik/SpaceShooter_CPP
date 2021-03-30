@@ -22,6 +22,7 @@ private:
 	void Init();
 	void Disconnect(Connection* client, NetworkMessage& data);
 	void HandShake(Connection* client, NetworkMessage& data);
+	void Movement(Connection* client, NetworkMessage& data);
 };
 
 

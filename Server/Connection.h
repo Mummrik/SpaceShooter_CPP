@@ -26,5 +26,5 @@ public:
 	size_t Id = 0;
 
 public:
-	void Send(NetworkMessage& msg);
+	void Send(NetworkMessage& msg, bool reliable);
 };
