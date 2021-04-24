@@ -152,12 +152,14 @@
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="RPC.cpp" />
     <ClCompile Include="Server.cpp" />
+    <ClCompile Include="Vec2d.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Connection.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="RPC.h" />
     <ClInclude Include="Server.h" />
+    <ClInclude Include="Vec2d.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

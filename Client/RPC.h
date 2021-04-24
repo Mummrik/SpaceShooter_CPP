@@ -23,8 +23,12 @@ private:
 	void Disconnect(Connection* client, NetworkMessage& data);
 	void HandShake(Connection* client, NetworkMessage& data);
 	void NewPlayer(Connection* client, NetworkMessage& data);
-	void Movement(Connection* client, NetworkMessage& data);
 	void RemovePlayer(Connection* client, NetworkMessage& data);
+	void Movement(Connection* client, NetworkMessage& data);
+	void Rotation(Connection* client, NetworkMessage& data);
+	void AnimateJetEngine(Connection* client, NetworkMessage& data);
+	void FireBullet(Connection* client, NetworkMessage& data);
+	void MoveBullet(Connection* client, NetworkMessage& data);
 
 };
 

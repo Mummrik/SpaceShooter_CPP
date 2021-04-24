@@ -1,27 +1,28 @@
 #pragma once
-
-#include <string>
-#include <NetworkMessage.h>
-#include "olcPixelGameEngine.h"
+#include "Game.h"
 
 class Player
 {
 public:
-	Player(size_t uid, uint8_t spriteId, const std::string& name) : m_Id(uid), m_Name(name), m_SpriteId(spriteId) {}
+	Player(uint64_t uid, uint8_t spriteId, olc::vf2d position, float rotation) : m_Uid(uid), m_SpriteId(spriteId), m_Position(position), m_Rotation(rotation) {}
 
 private:
-	size_t m_Id;
-	std::string m_Name;
+	uint64_t m_Uid;
+	olc::vf2d m_Position;
+	float m_Rotation = 0;
 	uint8_t m_SpriteId;
 
 public:
-	olc::vf2d Position;
-	bool IsThusting = false;
-
-public:
-	void OnUpdate(olc::PixelGameEngine* Engine, Game* game, float fElapsedTime);
-	const std::string& GetName() { return m_Name; }
+	bool IsActive = false;
+	bool IsThrusting = false;
+	void OnUpdate(Game* game);
+	uint64_t GetPlayerUid();
+	olc::vf2d GetPlayerPosition();
+	uint8_t GetPlayerSpriteId();
+	float GetPlayerRotation();
+	void SetRotation(float rotation);
+	void SetPosition(const olc::vf2d& position);
 
 private:
-	void Render(olc::PixelGameEngine* Engine, Game* game);
+	void Render(Game* game);
 };

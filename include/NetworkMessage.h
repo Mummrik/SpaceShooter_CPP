@@ -8,8 +8,12 @@ enum class PacketType
 	HandShake,
 	Ping,
 	NewPlayer,
-	Movement,
 	RemovePlayer,
+	Movement,
+	RotatePlayer,
+	AnimateJetEngine,
+	FireBullet,
+	MoveBullet,
 	MAX_LENGTH // NOTE: Keep this as last element
 };
 
@@ -121,6 +125,18 @@ struct NetworkMessage
 			Write((char)(value >> (8 * i)));
 	}
 
+	void Write(float value)
+	{
+		// TODO: Research how this works
+		char result[sizeof(float)];
+		memcpy(result, &value, sizeof(float));
+
+		for (auto i = 0; i < sizeof(float); i++)
+		{
+			Write(result[i]);
+		}
+	}
+
 	char ReadChar()
 	{
 		return Body[ReadPos++];
@@ -180,5 +196,16 @@ struct NetworkMessage
 			value += (int64_t)ReadUint8() << (8 * i);
 
 		return value;
+	}
+
+	float ReadFloat()
+	{
+		// TODO: Research this, to either use the bit shift method as int values or change int val
+		unsigned char buffer[4];
+		for (auto i = 0; i < sizeof(float); i++)
+		{
+			buffer[i] = ReadUint8();
+		}
+		return (*(float*)buffer);
 	}
 };

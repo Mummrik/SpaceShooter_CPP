@@ -1,11 +1,13 @@
 #include "RPC.h"
 #include "Connection.h"
 #include "Server.h"
+#include "Player.h"
 
 void RPC::Invoke(RPC& rpc, const PacketType& type, Connection* client, NetworkMessage& data)
 {
 	if ((uint16_t)type >= 0 && type < PacketType::MAX_LENGTH && m_Rpc[(size_t)type] != nullptr)
 	{
+		//std::lock_guard<std::mutex> lock(m_Server->mutex);
 		std::invoke(m_Rpc[(size_t)type], rpc, client, data);
 	}
 }
@@ -16,56 +18,67 @@ void RPC::Init()
 	m_Rpc[(size_t)PacketType::Disconnect] = &RPC::Disconnect;
 	m_Rpc[(size_t)PacketType::HandShake] = &RPC::HandShake;
 	m_Rpc[(size_t)PacketType::Movement] = &RPC::Movement;
+	m_Rpc[(size_t)PacketType::RotatePlayer] = &RPC::Rotation;
+	m_Rpc[(size_t)PacketType::FireBullet] = &RPC::FireBullet;
 }
 
 void RPC::Disconnect(Connection* client, NetworkMessage& data)
 {
-	// Code for disconnecting a client...
 	std::cout << ">> " << client->RemoteEndpoint << " => RPC::Disconnect()" << std::endl;
+	if (auto player = m_Server->GetPlayer(client->Id))
+		player->IsActive = false;
 
-	//m_Server->RemovePlayer(client->Id);
 	m_Server->TerminateClient(client);
 }
 
 void RPC::HandShake(Connection* client, NetworkMessage& data)
 {
-	// Code for client handshaking...
-	std::cout << ">> " << client->RemoteEndpoint << " => RPC::HandShake()" << std::endl;
+	//std::cout << ">> " << client->RemoteEndpoint << " => RPC::HandShake()" << std::endl;
 	client->Authorized = true;
 
-	for (auto& p : m_Server->m_Players)
+	//Send existing players to new connection
+	for (auto& c : m_Server->GetConnections())
 	{
-		auto& player = p.second;
-		NetworkMessage msg(PacketType::NewPlayer);
-		msg.Write(player->client->Id);
-		msg.Write(player->spriteId);
-		msg.Write((int64_t)player->Position.x);
-		msg.Write((int64_t)player->Position.y);
-		client->Send(msg, true);
+		if (auto player = m_Server->GetPlayer(c->Id))
+		{
+			NetworkMessage msg(PacketType::NewPlayer);
+			msg.Write(player->GetPlayerUid());
+			msg.Write(player->GetPlayerSpriteId());
+			msg.Write(player->GetPlayerPosition().x);
+			msg.Write(player->GetPlayerPosition().y);
+			msg.Write(player->GetPlayerRotation());
+			client->Send(msg, true);
+		}
 	}
 
-	m_Server->m_Players.emplace(client->Id, new Player(client, (uint8_t)(rand() % 10)));
-	auto& player = m_Server->m_Players[client->Id];
-
-	NetworkMessage msg(PacketType::NewPlayer);
-	msg.Write(player->client->Id);
-	msg.Write(player->spriteId);
-	msg.Write((int64_t)player->Position.x);
-	msg.Write((int64_t)player->Position.y);
-	m_Server->SendToAll(msg, true);
+	std::lock_guard<std::mutex> lock(m_Server->mutex);
+	m_Server->SpawnPlayer.push(client->Id);
 }
 
 void RPC::Movement(Connection* client, NetworkMessage& data)
 {
-	if (Player* player = m_Server->GetPlayer(client->Id))
+	//std::cout << ">> " << client->RemoteEndpoint << " => RPC::Movement()" << std::endl;
+	if (auto player = m_Server->GetPlayer(client->Id))
 	{
-		player->Position.x += data.ReadInt8();
-		player->Position.y += data.ReadInt8();
+		player->AddVelocity(Vec2d(data.ReadFloat(), data.ReadFloat()));
 
-		NetworkMessage msg(PacketType::Movement);
+		NetworkMessage msg(PacketType::AnimateJetEngine);
 		msg.Write(client->Id);
-		msg.Write((int64_t)player->Position.x);
-		msg.Write((int64_t)player->Position.y);
-		m_Server->SendToAll(msg, false);
+		m_Server->SendToAll(msg, true);
 	}
+}
+
+void RPC::Rotation(Connection* client, NetworkMessage& data)
+{
+	//std::cout << ">> " << client->RemoteEndpoint << " => RPC::Rotation()" << std::endl;
+	NetworkMessage msg(PacketType::RotatePlayer);
+	msg.Write(client->Id);
+	msg.Write(data.ReadFloat());
+	m_Server->SendToAll(msg, false);
+}
+
+void RPC::FireBullet(Connection* client, NetworkMessage& data)
+{
+	//std::cout << ">> " << client->RemoteEndpoint << " => RPC::FireBullet()" << std::endl;
+	m_Server->NewBullet(client->Id, Vec2d(data.ReadFloat(), data.ReadFloat()));
 }

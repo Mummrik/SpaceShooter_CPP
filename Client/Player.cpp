@@ -1,18 +1,69 @@
 #include "Player.h"
-#include "Game.h"
 
-void Player::OnUpdate(olc::PixelGameEngine* Engine, Game* Game, float fElapsedTime)
+void Player::OnUpdate(Game* game)
 {
-	Render(Engine, Game);
+	if (IsActive == false)
+		return;
+
+
+	Render(game);
 }
 
-void Player::Render(olc::PixelGameEngine* Engine, Game* Game)
+uint64_t Player::GetPlayerUid()
 {
-	//TODO: Rotate decals to look at mouse cursor
-	if (IsThusting)
+	return m_Uid;
+}
+
+olc::vf2d Player::GetPlayerPosition()
+{
+	return m_Position;
+}
+
+uint8_t Player::GetPlayerSpriteId()
+{
+	return m_SpriteId;
+}
+
+float Player::GetPlayerRotation()
+{
+	return m_Rotation;
+}
+
+void Player::SetRotation(float rotation)
+{
+	m_Rotation = rotation;
+}
+
+void Player::SetPosition(const olc::vf2d& position)
+{
+	m_Position = position;
+}
+
+void Player::Render(Game* game)
+{
+	if (IsThrusting)
 	{
-		Engine->DrawPartialDecal(Position + olc::vi2d(-32, -32), olc::vf2d(64, 64), Game->Gfx.decal, olc::vf2d(256, 256 * m_SpriteId), olc::vf2d(256, 256));
-		IsThusting = false;
+		IsThrusting = false;
+		game->DrawPartialRotatedDecal
+		(
+			m_Position + game->GetCameraPosition(),
+			game->Gfx.decal,
+			m_Rotation,
+			olc::vf2d(128.f, 128.f),
+			olc::vf2d(256.f, 256.f * m_SpriteId),
+			olc::vf2d(256.f, 256.f),
+			olc::vf2d(0.25f, 0.25f)
+		);
 	}
-	Engine->DrawPartialDecal(Position + olc::vi2d(-32,-32), olc::vf2d(64, 64), Game->Gfx.decal, olc::vf2d(0, 256 * m_SpriteId), olc::vf2d(256, 256));
+
+	game->DrawPartialRotatedDecal
+	(
+		m_Position + game->GetCameraPosition(),
+		game->Gfx.decal,
+		m_Rotation,
+		olc::vf2d(128.f, 128.f),
+		olc::vf2d(0, 256.f * m_SpriteId),
+		olc::vf2d(256.f, 256.f),
+		olc::vf2d(0.25f, 0.25f)
+	);
 }

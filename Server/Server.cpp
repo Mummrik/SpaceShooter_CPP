@@ -2,14 +2,13 @@
 //
 
 #include "Server.h"
+#include "Player.h"
 
-bool Server::Start()
+
+void Server::Start(uint16_t port)
 {
-	if (IsRunning)
-		return false;
-
+	std::cout << "Server starting on port " << port << std::endl;
 	m_Listener = std::thread(&Server::OnListen, this);
-	return true;
 }
 
 bool Server::Shutdown()
@@ -18,6 +17,9 @@ bool Server::Shutdown()
 
 	if (m_Listener.joinable())
 		m_Listener.join();
+
+	if (m_Game.joinable())
+		m_Game.join();
 
 	if (m_Socket.is_open())
 		m_Socket.close();
@@ -37,6 +39,7 @@ void TestNetworkMessage()
 	testMsg.Write(UINT16_MAX);
 	testMsg.Write(UINT32_MAX);
 	testMsg.Write(UINT64_MAX);
+	testMsg.Write(110.23156757f);
 	testMsg.PrepareSend();
 
 	NetworkMessage data(testMsg.Body);
@@ -64,41 +67,135 @@ void TestNetworkMessage()
 
 	uint64_t test_uint64_t = data.ReadUint64();
 	std::cout << "uint64_t " << (uint64_t)test_uint64_t << std::endl;
+
+	float test_float = data.ReadFloat();
+	std::cout << "float " << (float)test_float << std::endl;
 }
 
 void Server::OnListen()
 {
+	IsRunning = true;
 	std::cout << "Listener thread started" << std::endl;
 	asio::ip::udp::endpoint RemoteEndpoint;
 	std::array<char, 1024> InBuffer;
 	size_t recvSize = 0;
 
-	IsRunning = true;
+	m_Game = std::thread(&Server::GameLoop, this);
 
 	// Testing NetworkMessage 
 	//TestNetworkMessage();
 
 	while (IsRunning)
 	{
-		try
-		{
-			recvSize = m_Socket.receive_from(asio::buffer(InBuffer), RemoteEndpoint);
-		}
-		catch (const std::exception& ex)
-		{
-			std::cout << "\nException: " << ex.what() << "\n" << std::endl;
-			TerminateClient(GetConnection(RemoteEndpoint));
-		}
+		recvSize = m_Socket.receive_from(asio::buffer(InBuffer), RemoteEndpoint);
 
 		if (recvSize > 0)
 		{
 			std::vector<char> data(InBuffer.begin(), InBuffer.begin() + recvSize);
 			OnHandle(data, RemoteEndpoint);
 		}
-
 	}
 
 	std::cout << "Listener thread terminated" << std::endl;
+}
+
+void Server::GameLoop()
+{
+	std::cout << "GameLoop thread started" << std::endl;
+	float deltaTime = (1.0f / 60.0f) * 0.01f;
+
+	while (IsRunning)
+	{
+		// TODO: Gameloop logic
+		RandomSpriteId = rand() % 10;
+
+		for (auto player : m_Players)
+		{
+			if (player == nullptr)
+			{
+				break;
+			}
+			player->OnUpdate(this, deltaTime);
+		}
+
+		CheckRemovePlayer();
+		SpawnNewPlayer();
+	}
+
+	std::cout << "GameLoop thread terminated" << std::endl;
+}
+
+uint16_t Server::FindEmptyPlayerIndex()
+{
+	auto length = m_Players.size();
+	for (uint16_t i = 0; i < length; i++)
+		if (m_Players[i] == nullptr)
+			return i;
+
+	return -1;
+}
+
+void Server::CheckRemovePlayer()
+{
+	if (size_t length = m_RemovePlayer.size() > 0)
+	{
+		for (size_t i = 0; i < length; i++)
+		{
+			uint64_t uid = m_RemovePlayer.front();
+			m_RemovePlayer.pop();
+
+			size_t removeIndex = GetPlayerIndex(uid);
+			auto lastElement = GetLastPlayerElement();
+			size_t lastElementIndex = GetPlayerIndex(lastElement->GetPlayerUid());
+
+			if (removeIndex == lastElementIndex)
+			{
+				m_Players[removeIndex] = nullptr;
+			}
+			else
+			{
+				m_Players[removeIndex] = lastElement;
+				m_Players[lastElementIndex] = nullptr;
+			}
+
+			NetworkMessage msg(PacketType::RemovePlayer);
+			msg.Write(uid);
+			SendToAll(msg, true);
+		}
+	}
+}
+
+void Server::SpawnNewPlayer()
+{
+	if (size_t length = SpawnPlayer.size() > 0)
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		for (size_t i = 0; i < length; i++)
+		{
+			uint64_t uid = SpawnPlayer.front();
+			SpawnPlayer.pop();
+
+			uint16_t freeIndex = FindEmptyPlayerIndex();
+			if (freeIndex > m_Players.size())
+			{
+				std::cout << "Warning: Couldn't add Player, maximum amount of players reached." << std::endl;
+				return;
+			}
+
+			auto player = std::make_shared<Player>(uid, RandomSpriteId);
+			m_Players[freeIndex] = player;
+
+			player->IsActive = true;
+
+			NetworkMessage msg(PacketType::NewPlayer);
+			msg.Write(player->GetPlayerUid());
+			msg.Write(player->GetPlayerSpriteId());
+			msg.Write(player->GetPlayerPosition().x);
+			msg.Write(player->GetPlayerPosition().y);
+			msg.Write(player->GetPlayerRotation());
+			SendToAll(msg, true);
+		}
+	}
 }
 
 void Server::OnHandle(const std::vector<char>& Data, const asio::ip::udp::endpoint& RemoteEndpoint)
@@ -122,22 +219,14 @@ void Server::OnHandle(const std::vector<char>& Data, const asio::ip::udp::endpoi
 	}
 	else
 	{
-		Connection newClient(&m_Socket, RemoteEndpoint);
-		m_Connections.push_back(newClient);
+		client = new Connection(&m_Socket, RemoteEndpoint);
+		m_Connections.push_back(client);
 
-		client = &m_Connections[m_Connections.size() - 1];
-		if (client->SetId())
-		{
-			std::cout << "New Connection | " << client->RemoteEndpoint << std::endl;
+		std::cout << "New Connection | " << client->RemoteEndpoint << std::endl;
 
-			NetworkMessage msg(PacketType::HandShake);
-			msg.Write(client->Id);
-			client->Send(msg, true);
-		}
-		else
-		{
-			TerminateClient(client);
-		}
+		NetworkMessage msg(PacketType::HandShake);
+		msg.Write(client->Id);
+		client->Send(msg, true);
 	}
 }
 
@@ -146,66 +235,90 @@ void Server::SendToAll(NetworkMessage& msg, bool reliable)
 	msg.PrepareSend();
 	for (auto& client : m_Connections)
 	{
-		client.Socket->send_to(asio::buffer(msg.Body), client.RemoteEndpoint);
+		client->Socket->send_to(asio::buffer(msg.Body), client->RemoteEndpoint);
 	}
 }
 
 Connection* Server::GetConnection(const asio::ip::udp::endpoint& RemoteEndpoint)
 {
-	size_t size = m_Connections.size();
-	for (size_t i = 0; i < size; i++)
+	auto it = std::find_if(
+		m_Connections.begin(), m_Connections.end(),
+		[RemoteEndpoint](auto other) { return RemoteEndpoint == other->RemoteEndpoint; });
+
+	if (it != m_Connections.end())
 	{
-		if (m_Connections[i].RemoteEndpoint == RemoteEndpoint)
-		{
-			return &m_Connections[i];
-		}
+		return *it;
 	}
 
 	return nullptr;
 }
 
+std::vector<Connection*> Server::GetConnections()
+{
+	return m_Connections;
+}
+
 void Server::TerminateClient(Connection* client)
 {
-	RemovePlayer(client->Id);
-
+	uint64_t uid = client->Id;
 	auto it = std::find_if(m_Connections.begin(), m_Connections.end(),
-		[&client](Connection const& other) { return client->RemoteEndpoint == other.RemoteEndpoint; });
+		[&client](auto other) { return client->RemoteEndpoint == other->RemoteEndpoint; });
 
 	if (it != m_Connections.end())
 	{
 		NetworkMessage msg(PacketType::Disconnect);
 		client->Send(msg, true);
+		delete* it;
 		m_Connections.erase(it);
 	}
+
+	m_RemovePlayer.push(uid);
 }
 
-void Server::RemovePlayer(size_t uid)
+void Server::NewBullet(uint64_t owner, Vec2d velocity)
 {
-	Player* player = GetPlayer(uid);
-	auto it = std::find_if(m_Players.begin(), m_Players.end(),
-		[player](std::pair<size_t, Player*> const& other) { return player == other.second; });
-
-	if (it != m_Players.end())
-	{
-		NetworkMessage msg(PacketType::RemovePlayer);
-		msg.Write(uid);
-		SendToAll(msg, true);
-
-		m_Players.erase(it);
-		delete player;
-	}
-
 }
 
-Player* Server::GetPlayer(size_t uid)
+size_t Server::GetPlayerIndex(uint64_t uid)
 {
-	auto it = std::find_if(m_Players.begin(), m_Players.end(),
-		[&uid](std::pair<size_t, Player*> const& player) { return uid == player.first; });
-
-	if (it != m_Players.end())
+	size_t length = m_Players.size();
+	for (size_t i = 0; i < length; i++)
 	{
-		return m_Players[uid];
+		auto player = m_Players[i];
+		if (player->GetPlayerUid() == uid)
+		{
+			return i;
+		}
 	}
-	
+	return -1;
+}
+
+std::shared_ptr<Player> Server::GetLastPlayerElement()
+{
+	std::shared_ptr<Player> player = nullptr;
+	size_t length = m_Players.size();
+	for (size_t i = 0; i < length; i++)
+	{
+		if (m_Players[i] == nullptr)
+			break;
+
+		player = m_Players[i];
+	}
+
+	return player;
+}
+
+std::shared_ptr<Player> Server::GetPlayer(uint64_t uid)
+{
+	size_t length = m_Players.size();
+	for (size_t i = 0; i < length; i++)
+	{
+		if (m_Players[i] == nullptr)
+			return nullptr;
+
+		if (m_Players[i]->GetPlayerUid() == uid)
+			return m_Players[i];
+	}
+
 	return nullptr;
 }

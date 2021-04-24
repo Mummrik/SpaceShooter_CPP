@@ -47,7 +47,7 @@ void Connection::OnListen()
 		catch (const std::exception& ex)
 		{
 			std::cout << "\nException: " << ex.what() << "\n" << std::endl;
-			break;
+			//break;
 		}
 
 		if (recvSize > 0 && RemoteEndpoint == m_RemoteEndpoint)

@@ -23,6 +23,8 @@ private:
 	void Disconnect(Connection* client, NetworkMessage& data);
 	void HandShake(Connection* client, NetworkMessage& data);
 	void Movement(Connection* client, NetworkMessage& data);
+	void Rotation(Connection* client, NetworkMessage& data);
+	void FireBullet(Connection* client, NetworkMessage& data);
 };
 
 
