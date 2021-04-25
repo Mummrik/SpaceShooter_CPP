@@ -2,6 +2,7 @@
 #include "Connection.h"
 #include "Game.h"
 #include "Player.h"
+#include "Bullet.h"
 
 void RPC::Invoke(RPC& rpc, const PacketType& type, Connection* client, NetworkMessage& data)
 {
@@ -26,6 +27,7 @@ void RPC::Initialize(Game* game)
 	m_Rpc[(size_t)PacketType::AnimateJetEngine] = &RPC::AnimateJetEngine;
 	m_Rpc[(size_t)PacketType::FireBullet] = &RPC::FireBullet;
 	m_Rpc[(size_t)PacketType::MoveBullet] = &RPC::MoveBullet;
+	m_Rpc[(size_t)PacketType::RemoveBullet] = &RPC::RemoveBullet;
 }
 
 void RPC::Disconnect(Connection* client, NetworkMessage& data)
@@ -92,15 +94,29 @@ void RPC::FireBullet(Connection* client, NetworkMessage& data)
 {
 	//std::cout << ">> Server" << " => RPC::FireBullet()" << std::endl;
 	uint64_t uid = data.ReadUint64();
-	float x = data.ReadFloat();
-	float y = data.ReadFloat();
-	olc::vf2d position(x, y);
+	olc::vf2d position(data.ReadFloat(), data.ReadFloat());
+	float rotation = m_Game->CalcRotation(olc::vf2d(data.ReadFloat(), data.ReadFloat()), position);
 
-	m_Game->NewBullet(uid, position);
+	m_Game->NewBullet(uid, position, rotation);
 }
 
 void RPC::MoveBullet(Connection* client, NetworkMessage& data)
 {
 	//std::cout << ">> Server" << " => RPC::MoveBullet()" << std::endl;
 	uint64_t uid = data.ReadUint64();
+	if (auto bullet = m_Game->GetBullet(uid))
+	{
+		bullet->SetPosition(olc::vf2d(data.ReadFloat(), data.ReadFloat()));
+	}
+}
+
+void RPC::RemoveBullet(Connection* client, NetworkMessage& data)
+{
+	//std::cout << ">> Server" << " => RPC::RemoveBullet()" << std::endl;
+	uint64_t uid = data.ReadUint64();
+	if (auto bullet = m_Game->GetBullet(uid))
+	{
+		bullet->IsActive = false;
+		m_Game->RemoveBullet.push(uid);
+	}
 }

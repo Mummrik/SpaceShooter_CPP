@@ -6,6 +6,7 @@
 
 class Connection;
 class Player;
+class Bullet;
 
 struct GraphicObj
 {
@@ -52,12 +53,14 @@ public:
 	GraphicObj Gfx;
 	std::shared_ptr<olc::Sprite> sprite;
 	std::queue<uint64_t> RemovePlayer;
+	std::queue<uint64_t> RemoveBullet;
 
 private:
 	Connection* m_Client;
 	std::shared_ptr<Player> m_Player;
 	olc::vf2d m_CameraPosition;
 	std::array<std::shared_ptr<Player>, 1000> m_Players;
+	std::array<std::shared_ptr<Bullet>, 10000> m_Bullets;
 
 public:
 	void DrawCrossair();
@@ -65,15 +68,20 @@ public:
 	const olc::vf2d& GetCameraPosition();
 	void SetCameraPosition(const olc::vf2d& newPosition);
 	void NewPlayer(uint64_t uid, uint8_t spriteId, olc::vf2d position, float rotation);
-	void NewBullet(uint64_t uid, olc::vf2d position);
+	void NewBullet(uint64_t uid, olc::vf2d position, float rotation);
 	size_t GetPlayerIndex(uint64_t uid);
 	std::shared_ptr<Player> GetLastPlayerElement();
 	std::shared_ptr<Player> GetPlayer(uint64_t uid);
+	size_t GetBulletIndex(uint64_t uid);
+	std::shared_ptr<Bullet> GetLastBulletElement();
+	std::shared_ptr<Bullet> GetBullet(uint64_t uid);
 	
 private:
 	void Input();
 	uint16_t FindEmptyPlayerIndex();
 	void CheckRemovePlayer();
+	uint16_t FindEmptyBulletIndex();
+	void CheckRemoveBullet();
 
 };
 

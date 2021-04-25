@@ -29,6 +29,7 @@ private:
 	void AnimateJetEngine(Connection* client, NetworkMessage& data);
 	void FireBullet(Connection* client, NetworkMessage& data);
 	void MoveBullet(Connection* client, NetworkMessage& data);
+	void RemoveBullet(Connection* client, NetworkMessage& data);
 
 };
 

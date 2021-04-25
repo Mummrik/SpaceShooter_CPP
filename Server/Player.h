@@ -12,6 +12,7 @@ private:
 	float m_Rotation = 0;
 	Vec2d m_Velocity;
 	uint8_t m_SpriteId;
+	float m_Cooldown = 0;
 
 public:
 	bool IsActive = false;
@@ -21,4 +22,6 @@ public:
 	uint8_t GetPlayerSpriteId();
 	float GetPlayerRotation();
 	void AddVelocity(const Vec2d& velocity);
+	bool CanShoot();
+	void SetCooldown(float cooldown);
 };

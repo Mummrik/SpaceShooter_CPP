@@ -80,5 +80,13 @@ void RPC::Rotation(Connection* client, NetworkMessage& data)
 void RPC::FireBullet(Connection* client, NetworkMessage& data)
 {
 	//std::cout << ">> " << client->RemoteEndpoint << " => RPC::FireBullet()" << std::endl;
-	m_Server->NewBullet(client->Id, Vec2d(data.ReadFloat(), data.ReadFloat()));
+	if (auto player = m_Server->GetPlayer(client->Id))
+	{
+		if (player->CanShoot())
+		{
+			player->SetCooldown(1.0f);
+			Vec2d velocity(data.ReadFloat(), data.ReadFloat());
+			m_Server->NewBullet(player->GetPlayerPosition() + (velocity * 10), velocity);
+		}
+	}
 }

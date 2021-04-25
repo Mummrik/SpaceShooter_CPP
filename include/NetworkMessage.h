@@ -14,6 +14,7 @@ enum class PacketType
 	AnimateJetEngine,
 	FireBullet,
 	MoveBullet,
+	RemoveBullet,
 	MAX_LENGTH // NOTE: Keep this as last element
 };
 

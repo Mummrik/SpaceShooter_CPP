@@ -1,16 +1,28 @@
 #include "Bullet.h"
-#include "Game.h"
 
 void Bullet::Render(Game* game)
 {
+	if (IsActive == false)
+		return;
+
 	game->DrawPartialRotatedDecal
 	(
-		Position + game->GetCameraPosition(),
+		m_Position + game->GetCameraPosition(),
 		game->Gfx.decal,
-		Rotation,
-		olc::vi2d(128, 128),
-		olc::vf2d(256.f, 1280.f),
-		olc::vi2d(256, 256),
+		m_Rotation,
+		olc::vf2d(128.f, 128.f),
+		olc::vf2d(256.f, 256.f * 5),
+		olc::vf2d(256.f, 256.f),
 		olc::vf2d(0.25f, 0.25f)
 	);
+}
+
+uint64_t Bullet::GetBulletUid()
+{
+	return m_Uid;
+}
+
+void Bullet::SetPosition(const olc::vf2d& position)
+{
+	m_Position = position;
 }

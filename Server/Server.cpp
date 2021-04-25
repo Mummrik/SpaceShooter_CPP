@@ -3,6 +3,7 @@
 
 #include "Server.h"
 #include "Player.h"
+#include "Bullet.h"
 
 
 void Server::Start(uint16_t port)
@@ -118,8 +119,19 @@ void Server::GameLoop()
 			player->OnUpdate(this, deltaTime);
 		}
 
+		for (auto bullet : m_Bullets)
+		{
+			if (bullet == nullptr)
+			{
+				break;
+			}
+			bullet->OnUpdate(this, deltaTime);
+		}
+
 		CheckRemovePlayer();
 		SpawnNewPlayer();
+		CheckRemoveBullet();
+		SpawnNewBullet();
 	}
 
 	std::cout << "GameLoop thread terminated" << std::endl;
@@ -130,6 +142,16 @@ uint16_t Server::FindEmptyPlayerIndex()
 	auto length = m_Players.size();
 	for (uint16_t i = 0; i < length; i++)
 		if (m_Players[i] == nullptr)
+			return i;
+
+	return -1;
+}
+
+uint16_t Server::FindEmptyBulletIndex()
+{
+	auto length = m_Bullets.size();
+	for (uint16_t i = 0; i < length; i++)
+		if (m_Bullets[i] == nullptr)
 			return i;
 
 	return -1;
@@ -193,6 +215,67 @@ void Server::SpawnNewPlayer()
 			msg.Write(player->GetPlayerPosition().x);
 			msg.Write(player->GetPlayerPosition().y);
 			msg.Write(player->GetPlayerRotation());
+			SendToAll(msg, true);
+		}
+	}
+}
+
+void Server::SpawnNewBullet()
+{
+	if (size_t length = SpawnBullet.size() > 0)
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		for (size_t i = 0; i < length; i++)
+		{
+			auto bullet = SpawnBullet.front();
+			SpawnBullet.pop();
+
+			uint16_t freeIndex = FindEmptyBulletIndex();
+			if (freeIndex > m_Bullets.size())
+			{
+				std::cout << "Warning: Couldn't add Player, maximum amount of players reached." << std::endl;
+				return;
+			}
+
+			m_Bullets[freeIndex] = bullet;
+			bullet->IsActive = true;
+
+			NetworkMessage msg(PacketType::FireBullet);
+			msg.Write(bullet->GetBulletUid());
+			msg.Write(bullet->GetPosition().x);
+			msg.Write(bullet->GetPosition().y);
+			msg.Write(bullet->GetVelocity().x);
+			msg.Write(bullet->GetVelocity().y);
+			SendToAll(msg, true);
+		}
+	}
+}
+
+void Server::CheckRemoveBullet()
+{
+	if (size_t length = RemoveBullet.size() > 0)
+	{
+		for (size_t i = 0; i < length; i++)
+		{
+			uint64_t uid = RemoveBullet.front();
+			RemoveBullet.pop();
+
+			size_t removeIndex = GetBulletIndex(uid);
+			auto lastElement = GetLastBulletElement();
+			size_t lastElementIndex = GetBulletIndex(lastElement->GetBulletUid());
+
+			if (removeIndex == lastElementIndex)
+			{
+				m_Bullets[removeIndex] = nullptr;
+			}
+			else
+			{
+				m_Bullets[removeIndex] = lastElement;
+				m_Bullets[lastElementIndex] = nullptr;
+			}
+
+			NetworkMessage msg(PacketType::RemoveBullet);
+			msg.Write(uid);
 			SendToAll(msg, true);
 		}
 	}
@@ -275,8 +358,11 @@ void Server::TerminateClient(Connection* client)
 	m_RemovePlayer.push(uid);
 }
 
-void Server::NewBullet(uint64_t owner, Vec2d velocity)
+void Server::NewBullet(Vec2d position, Vec2d velocity)
 {
+	std::lock_guard<std::mutex> lock(mutex);
+	auto bullet = std::make_shared<Bullet>(position, velocity);
+	SpawnBullet.emplace(bullet);
 }
 
 size_t Server::GetPlayerIndex(uint64_t uid)
@@ -321,4 +407,33 @@ std::shared_ptr<Player> Server::GetPlayer(uint64_t uid)
 	}
 
 	return nullptr;
+}
+
+size_t Server::GetBulletIndex(uint64_t uid)
+{
+	size_t length = m_Bullets.size();
+	for (size_t i = 0; i < length; i++)
+	{
+		auto bullet = m_Bullets[i];
+		if (bullet->GetBulletUid() == uid)
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
+std::shared_ptr<Bullet> Server::GetLastBulletElement()
+{
+	std::shared_ptr<Bullet> bullet = nullptr;
+	size_t length = m_Bullets.size();
+	for (size_t i = 0; i < length; i++)
+	{
+		if (m_Bullets[i] == nullptr)
+			break;
+
+		bullet = m_Bullets[i];
+	}
+
+	return bullet;
 }
