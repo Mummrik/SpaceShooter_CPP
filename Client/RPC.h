@@ -30,6 +30,10 @@ private:
 	void FireBullet(Connection* client, NetworkMessage& data);
 	void MoveBullet(Connection* client, NetworkMessage& data);
 	void RemoveBullet(Connection* client, NetworkMessage& data);
+	void Ping(Connection* client, NetworkMessage& data);
+	void AnimateDamage(Connection* client, NetworkMessage& data);
+	void KDStats(Connection* client, NetworkMessage& data);
+	void UpdateHealth(Connection* client, NetworkMessage& data);
 
 };
 

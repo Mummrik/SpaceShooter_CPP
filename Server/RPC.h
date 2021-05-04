@@ -25,6 +25,7 @@ private:
 	void Movement(Connection* client, NetworkMessage& data);
 	void Rotation(Connection* client, NetworkMessage& data);
 	void FireBullet(Connection* client, NetworkMessage& data);
+	void Ping(Connection* client, NetworkMessage& data);
 };
 
 

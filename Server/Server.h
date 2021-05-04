@@ -41,7 +41,7 @@ public:
 	const float FixedDeltaTime = (1.0f / 60.0f) * 0.01f;
 	uint8_t RandomSpriteId;
 	std::queue<uint64_t> SpawnPlayer;
-	std::queue< std::shared_ptr<Bullet>> SpawnBullet;
+	std::queue<std::shared_ptr<Bullet>> SpawnBullet;
 	std::queue<uint64_t> RemoveBullet;
 
 private:
@@ -58,12 +58,14 @@ private:
 public:
 	void SendToAll(NetworkMessage& msg, bool reliable);
 	Connection* GetConnection(const asio::ip::udp::endpoint& RemoteEndpoint);
+	Connection* GetConnection(uint64_t uid);
 	std::vector<Connection*> GetConnections();
 	void TerminateClient(Connection* client);
-	void NewBullet(Vec2d position, Vec2d velocity);
+	void NewBullet(uint64_t ownerId, Vec2d position, Vec2d velocity, float rotation);
 	size_t GetPlayerIndex(uint64_t uid);
 	std::shared_ptr<Player> GetLastPlayerElement();
 	std::shared_ptr<Player> GetPlayer(uint64_t uid);
 	size_t GetBulletIndex(uint64_t uid);
 	std::shared_ptr<Bullet> GetLastBulletElement();
+	std::array<std::shared_ptr<Player>, 1000>& GetPlayers();
 };

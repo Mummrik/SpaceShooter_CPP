@@ -20,6 +20,7 @@ void RPC::Init()
 	m_Rpc[(size_t)PacketType::Movement] = &RPC::Movement;
 	m_Rpc[(size_t)PacketType::RotatePlayer] = &RPC::Rotation;
 	m_Rpc[(size_t)PacketType::FireBullet] = &RPC::FireBullet;
+	m_Rpc[(size_t)PacketType::Ping] = &RPC::Ping;
 }
 
 void RPC::Disconnect(Connection* client, NetworkMessage& data)
@@ -84,9 +85,18 @@ void RPC::FireBullet(Connection* client, NetworkMessage& data)
 	{
 		if (player->CanShoot())
 		{
-			player->SetCooldown(1.0f);
+			player->SetCooldown(0.5f);
 			Vec2d velocity(data.ReadFloat(), data.ReadFloat());
-			m_Server->NewBullet(player->GetPlayerPosition() + (velocity * 10), velocity);
+			float rotation = data.ReadFloat();
+			m_Server->NewBullet(client->Id, player->GetPlayerPosition() + (velocity * 10), velocity, rotation);
 		}
 	}
+}
+
+void RPC::Ping(Connection* client, NetworkMessage& data)
+{
+	int64_t time = data.ReadInt64();
+	NetworkMessage msg(PacketType::Ping);
+	msg.Write(time);
+	client->Send(msg, false);
 }

@@ -33,6 +33,13 @@ struct Vec2d
 	{
 		return sqrt((x * x) + (y * y));
 	}
+
+	float Distance(const Vec2d& other)
+	{
+		auto _x = x - other.x;
+		auto _y = y - other.y;
+		return sqrt(_x * _x + _y * _y);
+	}
 };
 
 Vec2d operator - (const Vec2d& lhs, const Vec2d& rhs);

@@ -1,6 +1,6 @@
 #include "Bullet.h"
 
-void Bullet::Render(Game* game)
+void Bullet::Render(Game* game, float fElapsedTime)
 {
 	if (IsActive == false)
 		return;

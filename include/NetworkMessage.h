@@ -15,6 +15,9 @@ enum class PacketType
 	FireBullet,
 	MoveBullet,
 	RemoveBullet,
+	AnimateDamage,
+	KDStats,
+	UpdateHealth,
 	MAX_LENGTH // NOTE: Keep this as last element
 };
 

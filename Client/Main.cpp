@@ -13,7 +13,6 @@ int main()
 	uint16_t port = 7171;
 
 	Connection client(host, port);
-
 	Game game("Title", &client);
 	if (game.Construct(1280, 720, 1, 1))
 	{

@@ -6,7 +6,7 @@
 bool Game::OnUserCreate()
 {
 	// Called once at the start, so create things here
-	if (Gfx.Load("..\\Assets\\ships.png"))
+	if (Gfx.Load("Assets\\ships.png"))
 	{
 		m_Client->Start(this);
 	}
@@ -30,7 +30,7 @@ bool Game::OnUserUpdate(float fElapsedTime)
 		{
 			break;
 		}
-		player->OnUpdate(this);
+		player->OnUpdate(this, fElapsedTime);
 	}
 
 	for (auto bullet : m_Bullets)
@@ -39,11 +39,39 @@ bool Game::OnUserUpdate(float fElapsedTime)
 		{
 			break;
 		}
-		bullet->Render(this);
+		bullet->Render(this, fElapsedTime);
 	}
 
 	CheckRemovePlayer();
 	CheckRemoveBullet();
+
+	if (Ping >= 0)
+	{
+		DrawString({ 10,10 }, "Ping: " + std::to_string(Ping) + "ms", Ping < 50 ? olc::GREEN : Ping < 100 ? olc::YELLOW : olc::RED);
+	}
+	else
+	{
+		if (m_Player != nullptr)
+		{
+			auto currentTime = std::chrono::system_clock::now().time_since_epoch().count();
+			NetworkMessage msg(PacketType::Ping);
+			msg.Write(currentTime);
+			m_Client->Send(msg);
+		}
+	}
+	DrawString({ 10,25 }, "Kills: " + std::to_string(Kills));
+	DrawString({ 10,38 }, "Deaths: " + std::to_string(Deaths));
+
+	m_PingTimer += fElapsedTime;
+	if (m_PingTimer >= 3 && m_Player != nullptr)
+	{
+		auto currentTime = std::chrono::system_clock::now().time_since_epoch().count();
+		NetworkMessage msg(PacketType::Ping);
+		msg.Write(currentTime);
+		m_Client->Send(msg);
+		m_PingTimer = 0;
+	}
+
 	return true;
 }
 
@@ -216,6 +244,7 @@ void Game::Input()
 			NetworkMessage msg(PacketType::FireBullet);
 			msg.Write(direction.x);
 			msg.Write(direction.y);
+			msg.Write(rotation);
 			m_Client->Send(msg);
 		}
 	}

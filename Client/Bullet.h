@@ -13,7 +13,7 @@ private:
 
 public:
 	bool IsActive = false;
-	void Render(Game* game);
+	void Render(Game* game, float fElapsedTime);
 	uint64_t GetBulletUid();
 	void SetPosition(const olc::vf2d& position);
 };

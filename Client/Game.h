@@ -54,6 +54,9 @@ public:
 	std::shared_ptr<olc::Sprite> sprite;
 	std::queue<uint64_t> RemovePlayer;
 	std::queue<uint64_t> RemoveBullet;
+	int Ping = -1;
+	uint32_t Kills = 0;
+	uint32_t Deaths = 0;
 
 private:
 	Connection* m_Client;
@@ -61,6 +64,7 @@ private:
 	olc::vf2d m_CameraPosition;
 	std::array<std::shared_ptr<Player>, 1000> m_Players;
 	std::array<std::shared_ptr<Bullet>, 10000> m_Bullets;
+	float m_PingTimer = 0;
 
 public:
 	void DrawCrossair();

@@ -103,28 +103,31 @@ void Server::OnListen()
 void Server::GameLoop()
 {
 	std::cout << "GameLoop thread started" << std::endl;
-	float deltaTime = (1.0f / 60.0f) * 0.01f;
+	float deltaTime;
+	auto currentTime = std::chrono::system_clock::now();
 
 	while (IsRunning)
 	{
-		// TODO: Gameloop logic
+		// Calculate deltatime
+		auto newTime = std::chrono::system_clock::now();
+		deltaTime = (newTime - currentTime).count() * 0.0000001f;
+		currentTime = newTime;
+
 		RandomSpriteId = rand() % 10;
 
 		for (auto player : m_Players)
 		{
 			if (player == nullptr)
-			{
 				break;
-			}
+
 			player->OnUpdate(this, deltaTime);
 		}
 
 		for (auto bullet : m_Bullets)
 		{
 			if (bullet == nullptr)
-			{
 				break;
-			}
+
 			bullet->OnUpdate(this, deltaTime);
 		}
 
@@ -233,7 +236,7 @@ void Server::SpawnNewBullet()
 			uint16_t freeIndex = FindEmptyBulletIndex();
 			if (freeIndex > m_Bullets.size())
 			{
-				std::cout << "Warning: Couldn't add Player, maximum amount of players reached." << std::endl;
+				std::cout << "Warning: Couldn't add bullet, maximum amount of bullets reached." << std::endl;
 				return;
 			}
 
@@ -244,8 +247,7 @@ void Server::SpawnNewBullet()
 			msg.Write(bullet->GetBulletUid());
 			msg.Write(bullet->GetPosition().x);
 			msg.Write(bullet->GetPosition().y);
-			msg.Write(bullet->GetVelocity().x);
-			msg.Write(bullet->GetVelocity().y);
+			msg.Write(bullet->GetRotation());
 			SendToAll(msg, true);
 		}
 	}
@@ -319,6 +321,15 @@ void Server::SendToAll(NetworkMessage& msg, bool reliable)
 	for (auto& client : m_Connections)
 	{
 		client->Socket->send_to(asio::buffer(msg.Body), client->RemoteEndpoint);
+		/*client->Socket->async_send_to(
+			asio::buffer(msg.Body), client->RemoteEndpoint,
+			[&](std::error_code ec, std::size_t length)
+			{
+				if (ec)
+				{
+					std::cout << "Sent " << length << " bytes" << std::endl;
+				}
+			});*/
 	}
 }
 
@@ -327,6 +338,20 @@ Connection* Server::GetConnection(const asio::ip::udp::endpoint& RemoteEndpoint)
 	auto it = std::find_if(
 		m_Connections.begin(), m_Connections.end(),
 		[RemoteEndpoint](auto other) { return RemoteEndpoint == other->RemoteEndpoint; });
+
+	if (it != m_Connections.end())
+	{
+		return *it;
+	}
+
+	return nullptr;
+}
+
+Connection* Server::GetConnection(uint64_t uid)
+{
+	auto it = std::find_if(
+		m_Connections.begin(), m_Connections.end(),
+		[uid](auto other) { return uid == other->Id; });
 
 	if (it != m_Connections.end())
 	{
@@ -358,10 +383,10 @@ void Server::TerminateClient(Connection* client)
 	m_RemovePlayer.push(uid);
 }
 
-void Server::NewBullet(Vec2d position, Vec2d velocity)
+void Server::NewBullet(uint64_t ownerId, Vec2d position, Vec2d velocity, float rotation)
 {
 	std::lock_guard<std::mutex> lock(mutex);
-	auto bullet = std::make_shared<Bullet>(position, velocity);
+	auto bullet = std::make_shared<Bullet>(ownerId, position, velocity, rotation);
 	SpawnBullet.emplace(bullet);
 }
 
@@ -436,4 +461,9 @@ std::shared_ptr<Bullet> Server::GetLastBulletElement()
 	}
 
 	return bullet;
+}
+
+std::array<std::shared_ptr<Player>, 1000>& Server::GetPlayers()
+{
+	return m_Players;
 }

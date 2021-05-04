@@ -13,6 +13,11 @@ private:
 	Vec2d m_Velocity;
 	uint8_t m_SpriteId;
 	float m_Cooldown = 0;
+	float m_CollisionRadius = 20;
+	float m_MaxHealth = 100;
+	float m_Health = m_MaxHealth;
+	uint32_t m_Kills = 0;
+	uint32_t m_Deaths = 0;
 
 public:
 	bool IsActive = false;
@@ -24,4 +29,11 @@ public:
 	void AddVelocity(const Vec2d& velocity);
 	bool CanShoot();
 	void SetCooldown(float cooldown);
+	float GetCollisionRadius();
+	void Damage(float damage, Server* server, Player* attacker = nullptr);
+	void AddKill(Server* server);
+	float GetHealth();
+
+private:
+	void OnDeath();
 };
